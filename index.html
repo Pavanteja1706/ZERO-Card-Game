@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ZERO — Memory Card Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ─── DESIGN SYSTEM ───────────────────────────────────── */
+:root{
+  /* Felt table */
+  --felt:       #1a3a2a;
+  --felt-light: #1f4431;
+  --felt-dark:  #122618;
+  /* Gold trim */
+  --gold:       #c9a84c;
+  --gold-light: #e2c06a;
+  --gold-dim:   #7a6130;
+  /* Cards */
+  --card-cream: #faf6ed;
+  --card-ivory: #f0ead8;
+  --card-shadow:rgba(0,0,0,0.55);
+  --card-back-deep:#1c2e4a;
+  --card-back-mid: #243a5e;
+  /* Text */
+  --text:       #f0e8d0;
+  --text-dim:   #9a8c72;
+  --text-ghost: #5a5040;
+  /* Alerts */
+  --red:        #c94040;
+  --red-glow:   rgba(201,64,64,0.25);
+  --green:      #3a8f58;
+  --green-glow: rgba(58,143,88,0.25);
+  --purple:     #7a48a8;
+  --purple-glow:rgba(122,72,168,0.3);
+  --blue:       #3a70a8;
+  /* Structure */
+  --panel-bg:   rgba(10,20,14,0.82);
+  --panel-border:rgba(201,168,76,0.18);
+  --r:          10px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  background:var(--felt);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px);
+  color:var(--text);
+  font-family:'Crimson Pro',Georgia,serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* ─── LOBBY ────────────────────────────────────────────── */
+#lobby{
+  align-items:center;justify-content:center;padding:40px 20px;text-align:center;
+  background:radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.1) 0%, transparent 65%);
+}
+.logo{
+  font-family:'Cinzel',serif;font-size:80px;font-weight:700;
+  color:var(--gold);line-height:1;margin-bottom:4px;
+  text-shadow:0 2px 24px rgba(201,168,76,0.4),0 0 60px rgba(201,168,76,0.15);
+  letter-spacing:12px;
+}
+.logo-sub{
+  font-family:'Crimson Pro',serif;font-style:italic;font-size:15px;
+  color:var(--text-dim);letter-spacing:3px;margin-bottom:48px;
+}
+.lobby-card{
+  background:linear-gradient(160deg,rgba(15,30,20,0.96),rgba(10,22,15,0.98));
+  border:1px solid var(--panel-border);
+  border-radius:16px;padding:36px;width:100%;max-width:420px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.7),inset 0 1px 0 rgba(201,168,76,0.1);
+}
+.lobby-card h2{
+  font-family:'Cinzel',serif;font-size:20px;letter-spacing:3px;
+  color:var(--gold);margin-bottom:6px;
+}
+.lobby-card p{font-size:14px;color:var(--text-dim);margin-bottom:28px;line-height:1.7;}
+.field{text-align:left;margin-bottom:18px;}
+.field label{
+  display:block;font-family:'Cinzel',serif;font-size:10px;
+  color:var(--gold-dim);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:7px;
+}
+.field input,.field select{
+  width:100%;background:rgba(201,168,76,0.04);
+  border:1px solid rgba(201,168,76,0.2);border-radius:8px;
+  padding:11px 14px;color:var(--text);
+  font-family:'Crimson Pro',serif;font-size:15px;outline:none;
+  transition:border-color 0.2s;
+}
+.field input:focus,.field select:focus{border-color:var(--gold);}
+.field select option{background:#0f1e14;}
+.btn{
+  width:100%;padding:14px;border:none;border-radius:8px;
+  font-family:'Cinzel',serif;font-size:14px;font-weight:600;
+  letter-spacing:2px;cursor:pointer;transition:all 0.2s;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--gold-light),var(--gold));
+  color:#0a1208;
+  box-shadow:0 4px 16px rgba(201,168,76,0.35);
+}
+.btn-primary:hover{
+  background:linear-gradient(135deg,#f0d080,var(--gold-light));
+  box-shadow:0 6px 24px rgba(201,168,76,0.5);transform:translateY(-1px);
+}
+.btn-secondary{
+  background:transparent;border:1px solid rgba(201,168,76,0.25);
+  color:var(--text-dim);margin-top:10px;
+}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ─── RULES MODAL ──────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity 0.25s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  background:linear-gradient(160deg,rgba(15,30,20,0.98),rgba(8,18,12,0.99));
+  border:1px solid var(--panel-border);border-radius:16px;
+  padding:30px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;
+  box-shadow:0 32px 80px rgba(0,0,0,0.8);
+}
+.modal h2{font-family:'Cinzel',serif;font-size:26px;letter-spacing:3px;color:var(--gold);margin-bottom:20px;}
+.rule-section{margin-bottom:18px;}
+.rule-section h3{
+  font-family:'Cinzel',serif;font-size:10px;text-transform:uppercase;
+  letter-spacing:0.15em;color:var(--gold);margin-bottom:8px;
+}
+.rule-section p,.rule-section li{font-size:14px;color:var(--text-dim);line-height:1.8;}
+.rule-section ul{padding-left:18px;}
+.card-value-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;}
+.cv{
+  background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.12);
+  border-radius:8px;padding:8px;text-align:center;font-size:12px;
+}
+.cv .rank{font-family:'Cinzel',serif;font-weight:600;color:var(--text);}
+.cv .val{color:var(--gold);font-size:11px;margin-top:3px;font-style:italic;}
+.power-grid{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.pw{
+  display:flex;gap:12px;align-items:flex-start;
+  background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.08);
+  border-radius:8px;padding:10px 12px;
+}
+.pw .rank{font-family:'Cinzel',serif;font-weight:600;color:var(--gold);min-width:40px;font-size:13px;}
+.pw .desc{font-size:13px;color:var(--text-dim);line-height:1.6;}
+
+/* ─── TOPBAR ───────────────────────────────────────────── */
+#game{flex-direction:column;}
+.topbar{
+  background:rgba(8,18,12,0.96);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(201,168,76,0.15);
+  padding:10px 20px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.topbar-title{
+  font-family:'Cinzel',serif;font-size:22px;font-weight:700;
+  color:var(--gold);letter-spacing:6px;
+  text-shadow:0 0 20px rgba(201,168,76,0.4);
+}
+.round-info{font-family:'Crimson Pro',serif;font-size:13px;color:var(--text-dim);letter-spacing:0.5px;}
+.round-info span{color:var(--gold);font-weight:600;}
+.scores-mini{display:flex;gap:10px;}
+.score-chip{
+  font-size:12px;
+  background:rgba(201,168,76,0.07);
+  border:1px solid rgba(201,168,76,0.18);
+  border-radius:20px;padding:3px 12px;display:flex;align-items:center;gap:6px;
+}
+.score-chip .name{color:var(--text-dim);font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.1em;}
+.score-chip .pts{color:var(--gold);font-family:'DM Mono',monospace;font-size:12px;}
+
+.game-area{padding:14px 16px;flex:1;max-width:720px;margin:0 auto;width:100%;}
+
+/* ─── PLAYER ROWS ──────────────────────────────────────── */
+.players-section{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+.player-row{
+  background:rgba(10,22,15,0.75);
+  border:1px solid rgba(201,168,76,0.1);
+  border-radius:12px;padding:14px 16px;
+  transition:border-color 0.25s,box-shadow 0.25s;
+  backdrop-filter:blur(4px);
+}
+.player-row.active-turn{
+  border-color:rgba(201,168,76,0.5);
+  box-shadow:0 0 0 1px rgba(201,168,76,0.1),0 4px 24px rgba(0,0,0,0.5);
+}
+.player-row.is-you{
+  background:rgba(12,28,18,0.85);
+  border-color:rgba(58,112,168,0.35);
+}
+.player-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.player-name{font-family:'Cinzel',serif;font-weight:600;font-size:14px;letter-spacing:1px;color:var(--text);}
+.you-tag{
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.1em;
+  color:var(--blue);background:rgba(58,112,168,0.12);
+  border:1px solid rgba(58,112,168,0.3);border-radius:10px;
+  padding:1px 8px;margin-left:8px;
+}
+.turn-tag{
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.1em;
+  background:rgba(201,168,76,0.12);color:var(--gold);
+  border:1px solid rgba(201,168,76,0.3);border-radius:10px;padding:2px 10px;
+  animation:pulse-gold 2s infinite;
+}
+@keyframes pulse-gold{0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0);}50%{box-shadow:0 0 0 4px rgba(201,168,76,0.15);}}
+.cards-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ─── CARDS ─────────────────────────────────────────────── */
+.card{
+  width:62px;height:90px;border-radius:9px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:default;position:relative;
+  transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.18s;
+  user-select:none;flex-shrink:0;
+}
+
+/* Face-down back — deep navy with elegant pattern */
+.card-back{
+  background:linear-gradient(145deg,var(--card-back-mid),var(--card-back-deep));
+  border:1px solid rgba(201,168,76,0.25);
+  box-shadow:0 4px 12px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.card-back::before{
+  content:'';position:absolute;inset:5px;
+  border:1px solid rgba(201,168,76,0.18);border-radius:5px;
+  background-image:repeating-linear-gradient(45deg,
+    rgba(201,168,76,0.05) 0,rgba(201,168,76,0.05) 1px,
+    transparent 0,transparent 8px);
+}
+.card-back::after{
+  content:'✦';position:absolute;
+  font-size:18px;color:rgba(201,168,76,0.2);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+}
+
+/* Face-up cards */
+.card-front{
+  background:var(--card-cream);
+  border:1px solid rgba(0,0,0,0.12);
+  box-shadow:0 4px 14px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.card-front .rank{
+  font-family:'Cinzel',serif;font-size:20px;font-weight:700;
+  color:#1a1208;line-height:1;
+}
+.card-front .suit{font-size:16px;line-height:1;margin-top:1px;}
+.card-front .val-badge{
+  position:absolute;bottom:5px;right:6px;
+  font-family:'DM Mono',monospace;font-size:9px;
+  background:rgba(0,0,0,0.07);border-radius:3px;
+  padding:1px 4px;color:#5a4a2a;
+}
+/* Corner rank/suit labels */
+.card-front .corner-tl{position:absolute;top:4px;left:6px;font-family:'Cinzel',serif;font-size:11px;font-weight:700;line-height:1.1;text-align:center;}
+.card-front .corner-br{position:absolute;bottom:4px;right:6px;font-family:'Cinzel',serif;font-size:11px;font-weight:700;line-height:1.1;text-align:center;transform:rotate(180deg);}
+.card-front.hearts .rank,.card-front.diamonds .rank,
+.card-front.hearts .suit,.card-front.diamonds .suit,
+.card-front.hearts .corner-tl,.card-front.diamonds .corner-tl,
+.card-front.hearts .corner-br,.card-front.diamonds .corner-br{color:#a01818;}
+
+/* Card states */
+.card.selectable{cursor:pointer;}
+.card.selectable:hover{transform:translateY(-6px) scale(1.04);box-shadow:0 12px 28px rgba(0,0,0,0.6);}
+.card.selected{
+  transform:translateY(-8px) scale(1.05);
+  box-shadow:0 14px 32px rgba(201,168,76,0.4),0 0 0 2px var(--gold);
+}
+.card.known-glow{box-shadow:0 4px 12px rgba(0,0,0,0.55),0 0 0 2px rgba(58,143,88,0.5);}
+.card.ai-highlight{box-shadow:0 4px 12px rgba(0,0,0,0.55),0 0 0 2px rgba(122,72,168,0.7),0 0 16px rgba(122,72,168,0.4);}
+.card-index{
+  position:absolute;top:4px;left:6px;
+  font-family:'DM Mono',monospace;font-size:9px;
+  color:rgba(201,168,76,0.45);z-index:1;
+}
+
+/* Empty dropped slot */
+.card-slot-empty{
+  width:62px;height:90px;border-radius:9px;
+  border:1px dashed rgba(201,168,76,0.15);
+  background:rgba(0,0,0,0.2);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;position:relative;
+}
+.card-slot-empty .card-index{color:rgba(201,168,76,0.2);}
+
+/* ─── DECK & DISCARD AREA ──────────────────────────────── */
+.deck-area{
+  display:flex;gap:32px;align-items:center;justify-content:center;
+  margin:12px 0;padding:20px;
+  background:rgba(8,18,12,0.6);
+  border:1px solid rgba(201,168,76,0.1);
+  border-radius:14px;
+  position:relative;
+}
+.deck-area::before{
+  content:'';position:absolute;inset:1px;border-radius:13px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.04),transparent 70%);
+  pointer-events:none;
+}
+.deck-pile{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.deck-pile label{
+  font-family:'Cinzel',serif;font-size:9px;text-transform:uppercase;
+  letter-spacing:0.15em;color:var(--text-ghost);
+}
+.deck-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-ghost);}
+.discard-empty{
+  width:62px;height:90px;border-radius:9px;
+  border:1px dashed rgba(201,168,76,0.2);
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.25);
+}
+.discard-empty span{font-size:9px;color:var(--text-ghost);text-align:center;font-family:'Cinzel',serif;letter-spacing:0.1em;}
+
+/* Draw pile hover */
+#drawPileCard:hover{transform:scale(1.06);box-shadow:0 8px 24px rgba(0,0,0,0.6),0 0 0 1px rgba(201,168,76,0.4)!important;}
+
+/* ─── ACTION PANEL ─────────────────────────────────────── */
+.action-panel{
+  background:rgba(8,18,12,0.85);
+  border:1px solid rgba(201,168,76,0.15);
+  border-radius:12px;padding:18px 20px;margin-bottom:10px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+.action-title{
+  font-family:'Cinzel',serif;font-size:16px;font-weight:600;
+  letter-spacing:2px;color:var(--gold);margin-bottom:5px;
+}
+.action-desc{font-size:14px;color:var(--text-dim);margin-bottom:14px;line-height:1.6;}
+.action-btns{display:flex;flex-wrap:wrap;gap:8px;}
+.action-btn{
+  padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;
+  cursor:pointer;font-family:'Cinzel',serif;letter-spacing:0.5px;
+  border:1px solid rgba(201,168,76,0.2);
+  background:rgba(201,168,76,0.05);color:var(--text-dim);
+  transition:all 0.16s;
+}
+.action-btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.1);}
+.action-btn.primary{
+  background:linear-gradient(135deg,var(--gold-light),var(--gold));
+  color:#0a1208;border-color:var(--gold);font-weight:600;
+  box-shadow:0 3px 12px rgba(201,168,76,0.3);
+}
+.action-btn.primary:hover{
+  background:linear-gradient(135deg,#f0d080,var(--gold-light));
+  box-shadow:0 5px 18px rgba(201,168,76,0.45);transform:translateY(-1px);
+}
+.action-btn.danger{border-color:rgba(201,64,64,0.4);color:#e07070;}
+.action-btn.danger:hover{background:rgba(201,64,64,0.1);border-color:#c94040;color:#c94040;}
+.action-btn.success{border-color:rgba(58,143,88,0.4);color:#60b878;}
+.action-btn.success:hover{background:rgba(58,143,88,0.1);border-color:#3a8f58;color:#3a8f58;}
+
+/* ─── DROP PROMPT ──────────────────────────────────────── */
+.drop-prompt{
+  background:rgba(8,18,12,0.92);
+  border:2px solid rgba(201,168,76,0.4);
+  border-radius:12px;padding:18px 20px;margin-bottom:10px;text-align:center;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(201,168,76,0.08);
+}
+.drop-prompt h3{
+  font-family:'Cinzel',serif;font-size:18px;letter-spacing:2px;
+  color:var(--gold);margin-bottom:8px;
+}
+.drop-prompt p{font-size:14px;color:var(--text-dim);margin-bottom:14px;line-height:1.6;}
+.drop-prompt .action-btns{justify-content:center;}
+
+/* ─── LOG ───────────────────────────────────────────────── */
+.log{
+  background:rgba(6,14,10,0.8);
+  border:1px solid rgba(201,168,76,0.08);
+  border-radius:10px;padding:10px 14px;margin-bottom:10px;
+  max-height:100px;overflow-y:auto;
+}
+.log::-webkit-scrollbar{width:3px;}
+.log::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.2);border-radius:2px;}
+.log-entry{
+  font-family:'Crimson Pro',serif;font-size:13px;
+  color:var(--text-ghost);padding:2px 0;
+  border-bottom:1px solid rgba(255,255,255,0.02);line-height:1.5;
+}
+.log-entry:last-child{color:var(--text-dim);}
+.log-entry .who{color:var(--gold);font-weight:600;}
+
+/* ─── PEEK TOAST ────────────────────────────────────────── */
+.peek-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.82);
+  display:flex;align-items:center;justify-content:center;display:none;
+}
+.peek-overlay.show{display:flex;}
+.peek-toast{
+  background:linear-gradient(160deg,rgba(15,30,20,0.98),rgba(8,18,12,0.99));
+  border:1px solid rgba(201,168,76,0.35);border-radius:16px;
+  padding:32px 40px;text-align:center;
+  box-shadow:0 24px 64px rgba(0,0,0,0.8),0 0 0 1px rgba(201,168,76,0.08);
+}
+.peek-toast h3{
+  font-family:'Cinzel',serif;font-size:20px;letter-spacing:3px;
+  color:var(--gold);margin-bottom:6px;
+}
+.peek-toast .peek-sub{font-size:13px;color:var(--text-dim);margin-bottom:20px;font-style:italic;}
+.peek-toast .peek-card-wrap{margin:0 auto 22px;}
+.peek-toast .action-btn{margin:0 auto;}
+
+/* ─── ROUND END / GAME OVER ─────────────────────────────── */
+.round-end-overlay{
+  position:fixed;inset:0;z-index:250;
+  background:rgba(0,0,0,0.88);
+  display:flex;align-items:center;justify-content:center;padding:20px;display:none;
+}
+.round-end-overlay.show{display:flex;}
+.round-end-card{
+  background:linear-gradient(160deg,rgba(15,30,20,0.98),rgba(8,18,12,0.99));
+  border:1px solid rgba(201,168,76,0.25);border-radius:18px;
+  padding:32px;max-width:480px;width:100%;text-align:center;max-height:90vh;overflow-y:auto;
+  box-shadow:0 32px 80px rgba(0,0,0,0.9),inset 0 1px 0 rgba(201,168,76,0.12);
+}
+.round-end-card h2{
+  font-family:'Cinzel',serif;font-size:28px;letter-spacing:4px;margin-bottom:6px;
+}
+.round-end-card .subtitle{font-size:14px;color:var(--text-dim);margin-bottom:22px;font-style:italic;}
+.reveal-table{width:100%;border-collapse:collapse;margin-bottom:22px;text-align:left;}
+.reveal-table th{
+  font-family:'Cinzel',serif;font-size:10px;color:var(--gold-dim);
+  text-transform:uppercase;letter-spacing:0.12em;
+  padding:7px 8px;border-bottom:1px solid rgba(201,168,76,0.15);
+}
+.reveal-table td{
+  padding:8px;font-size:14px;
+  border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-dim);
+}
+.reveal-table .winner-row td{color:#60b878;}
+.reveal-table .penalty-row .penalty-cell{color:#e07070;}
+.game-over-overlay{
+  position:fixed;inset:0;z-index:260;background:rgba(0,0,0,0.93);
+  display:flex;align-items:center;justify-content:center;padding:20px;display:none;
+}
+.game-over-overlay.show{display:flex;}
+.game-over-card{
+  background:linear-gradient(160deg,rgba(18,34,22,0.99),rgba(8,18,12,0.99));
+  border:1px solid rgba(201,168,76,0.3);border-radius:20px;
+  padding:40px;max-width:440px;width:100%;text-align:center;
+  box-shadow:0 40px 100px rgba(0,0,0,0.95),inset 0 1px 0 rgba(201,168,76,0.15);
+}
+.champion{
+  font-family:'Cinzel',serif;font-size:52px;font-weight:700;
+  letter-spacing:5px;color:var(--gold);line-height:1;
+  text-shadow:0 2px 24px rgba(201,168,76,0.5);
+}
+.champion-sub{font-size:14px;color:var(--text-dim);margin-bottom:28px;font-style:italic;}
+.final-scores{display:flex;flex-direction:column;gap:8px;margin-bottom:28px;}
+.final-score-row{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(201,168,76,0.04);
+  border:1px solid rgba(201,168,76,0.1);border-radius:8px;padding:11px 16px;
+}
+.final-score-row.winner{
+  border-color:rgba(201,168,76,0.35);
+  background:rgba(201,168,76,0.08);
+}
+.final-score-row .fsname{font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.5px;}
+.fsscore{font-family:'DM Mono',monospace;color:var(--gold);}
+.trophy{font-size:36px;margin-bottom:12px;}
+
+/* ─── AI SWAP OVERLAY ───────────────────────────────────── */
+.swap-overlay{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;display:none;}
+.swap-overlay.show{display:flex;}
+.swap-toast{background:rgba(12,24,16,0.98);border:1px solid rgba(201,168,76,0.25);border-radius:14px;padding:24px 30px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.7);min-width:280px;}
+.swap-toast h3{font-family:'Cinzel',serif;font-size:18px;letter-spacing:2px;color:var(--gold);margin-bottom:4px;}
+.swap-toast .swap-sub{font-size:13px;color:var(--text-dim);margin-bottom:16px;font-style:italic;}
+.swap-cards-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:4px;}
+.swap-arrow{font-size:22px;color:var(--gold);}
+.swap-label{font-size:10px;color:var(--text-ghost);margin-top:6px;text-align:center;font-family:'Cinzel',serif;letter-spacing:0.1em;}
+
+/* ─── FLYING CARD (animation) ───────────────────────────── */
+.flying-card{
+  position:fixed;width:62px;height:90px;border-radius:9px;
+  pointer-events:none;z-index:500;
+  background:linear-gradient(145deg,var(--card-back-mid),var(--card-back-deep));
+  border:1px solid rgba(201,168,76,0.25);
+  box-shadow:0 12px 32px rgba(0,0,0,0.7);
+  transition:left 0.48s cubic-bezier(0.4,0,0.2,1),top 0.48s cubic-bezier(0.4,0,0.2,1),opacity 0.48s;
+}
+.flying-card::before{
+  content:'';position:absolute;inset:5px;
+  border:1px solid rgba(201,168,76,0.15);border-radius:5px;
+}
+</style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby" class="screen active">
+  <div class="logo">ZERO</div>
+  <div class="logo-sub">The Memory Card Game</div>
+  <div class="lobby-card">
+    <h2>New Game</h2>
+    <p>A skill-based memory card game. Know your cards. Time your declare. Lowest score wins.</p>
+    <div class="field"><label>Your Name</label><input id="yourName" type="text" value="You" maxlength="12"/></div>
+    <div class="field"><label>Number of Players</label>
+      <select id="numPlayers"><option value="2">2 Players</option><option value="3" selected>3 Players</option><option value="4">4 Players</option></select>
+    </div>
+    <div class="field"><label>Number of Rounds</label>
+      <select id="numRounds"><option value="5">5 Rounds</option><option value="10" selected>10 Rounds</option><option value="15">15 Rounds</option></select>
+    </div>
+    <button class="btn btn-primary" onclick="startGame()">Deal Cards</button>
+    <button class="btn btn-secondary" onclick="showRules()">How to Play</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" class="screen">
+  <div class="topbar">
+    <div class="topbar-title">ZERO</div>
+    <div class="round-info">Round <span id="roundDisplay">1</span> of <span id="maxRoundDisplay">10</span></div>
+    <div class="scores-mini" id="scoresMini"></div>
+  </div>
+  <div class="game-area">
+    <div class="players-section" id="playersSection"></div>
+    <div class="deck-area">
+      <div class="deck-pile">
+        <label>Draw Pile</label>
+        <div class="card card-back" id="drawPileCard" onclick="drawCard()" style="cursor:pointer"></div>
+        <div class="deck-count" id="deckCount"></div>
+      </div>
+      <div class="deck-pile">
+        <label>Discard</label>
+        <div id="discardPile"></div>
+      </div>
+    </div>
+    <!-- Drop prompt shown here when a drop opportunity exists -->
+    <div id="dropPrompt" style="display:none"></div>
+    <div class="action-panel" id="actionPanel">
+      <div class="action-title" id="actionTitle">Waiting...</div>
+      <div class="action-desc" id="actionDesc"></div>
+      <div class="action-btns" id="actionBtns"></div>
+    </div>
+    <div class="log" id="gameLog"></div>
+  </div>
+</div>
+
+<!-- RULES -->
+<div class="modal-overlay" id="rulesModal">
+  <div class="modal">
+    <h2>How to Play</h2>
+    <div class="rule-section"><h3>Goal</h3><p>Lowest total hand value when someone declares. Lowest cumulative score after all rounds wins.</p></div>
+    <div class="rule-section"><h3>Card Values</h3>
+      <div class="card-value-grid">
+        <div class="cv"><div class="rank">A</div><div class="val">0</div></div>
+        <div class="cv"><div class="rank">2–10</div><div class="val">Face value</div></div>
+        <div class="cv"><div class="rank">J, Q</div><div class="val">10</div></div>
+        <div class="cv"><div class="rank">K</div><div class="val">−1</div></div>
+      </div>
+    </div>
+    <div class="rule-section"><h3>Card Powers</h3>
+      <div class="power-grid">
+        <div class="pw"><div class="rank">A–6</div><div class="desc">No power</div></div>
+        <div class="pw"><div class="rank">7, 8</div><div class="desc">Peek one of your own face-down cards</div></div>
+        <div class="pw"><div class="rank">9, 10</div><div class="desc">Peek any one of an opponent's cards</div></div>
+        <div class="pw"><div class="rank">J</div><div class="desc">Blind swap — swap one of your unseen cards with an opponent's unseen card (no peeking). OR if you already have J's in hand, drop the drawn J and drop your matching J's too.</div></div>
+        <div class="pw"><div class="rank">Q</div><div class="desc">Choose one of your cards and one opponent card, see both, then optionally swap.</div></div>
+      </div>
+    </div>
+    <div class="rule-section"><h3>Same-rank Drop Chain</h3>
+      <p>When you draw a card and discard it, you can also drop all matching cards of the same rank from your hand at once. Example: draw J, already have 2 J's in hand — discard drawn J and drop your 2 J's, going from 4 cards to 1 card.</p>
+    </div>
+    <div class="rule-section"><h3>Drop on Discard</h3>
+      <p>After ANY player discards a card, you may drop your matching-rank cards if you know you have them. Wrong drop = keep it + receive 1 penalty card.</p>
+    </div>
+    <div class="rule-section"><h3>Start of Round</h3>
+      <p>Each player gets 4 face-down cards. You peek your bottom 2 cards (cards 3 & 4) once — they are then permanently face-down until the round ends.</p>
+    </div>
+    <div class="rule-section"><h3>Declaring</h3>
+      <p>On your turn, declare instead of drawing. If you have the lowest total — everyone scores their hand total. If not — you score your total + 25 penalty.</p>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="closeRules()">Got it</button>
+  </div>
+</div>
+
+<!-- PEEK -->
+<div class="peek-overlay" id="peekOverlay">
+  <div class="peek-toast">
+    <h3 id="peekTitle">Your Card</h3>
+    <div class="peek-sub" id="peekSub">Remember this — it will be face-down for the rest of the round.</div>
+    <div class="peek-card-wrap" id="peekCardDisplay"></div>
+    <button class="action-btn primary" onclick="closePeek()">Got it — I'll remember</button>
+  </div>
+</div>
+
+<!-- AI ACTIVITY OVERLAY — dedicated, never overwritten by dropPrompt -->
+<div id="aiActivityOverlay" style="display:none;position:fixed;inset:0;z-index:280;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:2px solid var(--purple);border-radius:16px;padding:28px 32px;max-width:460px;width:100%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.6)">
+    <h3 id="aiActivityTitle" style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--purple);margin-bottom:8px">👁 Opponent Action</h3>
+    <div id="aiActivityBody" style="margin-bottom:10px"></div>
+    <p id="aiActivityCountdown" style="font-size:11px;color:var(--muted);margin-bottom:14px"></p>
+    <button class="action-btn primary" onclick="closeAiActivity()" style="margin:0 auto">OK — I saw it</button>
+  </div>
+</div>
+
+<!-- AI SWAP ANIMATION -->
+<div class="swap-overlay" id="swapOverlay">
+  <div class="swap-toast">
+    <h3 id="swapTitle">Opponent Swap</h3>
+    <div class="swap-sub" id="swapSub"></div>
+    <div class="swap-cards-row" id="swapCardsRow"></div>
+  </div>
+</div>
+
+<!-- ROUND END -->
+<div class="round-end-overlay" id="roundEndOverlay">
+  <div class="round-end-card">
+    <h2 id="roundEndTitle">Round Over</h2>
+    <div class="subtitle" id="roundEndSubtitle"></div>
+    <table class="reveal-table" id="revealTable"></table>
+    <button class="btn btn-primary" onclick="nextRound()">Next Round</button>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="game-over-overlay" id="gameOverOverlay">
+  <div class="game-over-card">
+    <div class="trophy">🏆</div>
+    <div class="champion" id="championName"></div>
+    <div class="champion-sub">Wins with the lowest total score!</div>
+    <div class="final-scores" id="finalScores"></div>
+    <button class="btn btn-primary" onclick="location.reload()">Play Again</button>
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg,src,line,col,err){
+  console.error(`CRASH at line ${line}: ${msg}`, err && err.stack ? err.stack : '');
+};
+// ══════════════════════════════════════════════════════════
+// CONSTANTS & HELPERS
+// ══════════════════════════════════════════════════════════
+const SUITS = ['spades','hearts','diamonds','clubs'];
+const SYM   = {spades:'♠',hearts:'♥',diamonds:'♦',clubs:'♣'};
+const RANKS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+function cardValue(r){ if(r==='A')return 0; if(r==='K')return -1; if(['J','Q'].includes(r))return 10; return parseInt(r); }
+function cardPower(r){ if(['7','8'].includes(r))return 'peek_own'; if(['9','10'].includes(r))return 'peek_opp'; if(r==='J')return 'blind_swap'; if(r==='Q')return 'compare_swap'; return null; }
+function buildDeck(n=1){ const d=[]; for(let i=0;i<n;i++) for(const s of SUITS) for(const r of RANKS) d.push({rank:r,suit:s,value:cardValue(r),power:cardPower(r)}); return shuffle(d); }
+function shuffle(a){ const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; }
+function handTotal(p){ return p.hand.reduce((s,c)=>s+(c?c.value:0),0); }
+function handCount(p){ return p.hand.filter(c=>c!==null).length; }
+function handCards(p){ return p.hand.filter(c=>c!==null); }
+
+// ══════════════════════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════════════════════
+let G = {};
+
+function initRound(){
+  G.deck = buildDeck(G.numPlayers <= 3 ? 1 : 2);
+  G.discardPile = [];
+  G.currentPlayerIdx = 0;
+  G.phase = 'peek_initial';
+  G.drawnCard = null;
+  G.selectedMyCard = null;
+  G.selectedOppCard = null;
+  G.selectedOppPlayer = null;
+  // FIX 1: handKnown tracks memory only — cards are NEVER shown face-up
+  // based on this flag after the initial peek. The peek toast shows them
+  // once, then they go permanently face-down.
+  // handKnown[ci] = true means "player remembers this card's value"
+  // but it does NOT mean show face-up in the UI.
+  for(const p of G.players){
+    p.hand=[];
+    p.handKnown=[];
+    for(let i=0;i<4;i++){ p.hand.push(G.deck.pop()); p.handKnown.push(false); }
+  }
+  // AI auto-knows their bottom 2 (simulating their peek)
+  for(let pi=1;pi<G.numPlayers;pi++){
+    G.players[pi].handKnown[2]=true;
+    G.players[pi].handKnown[3]=true;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// START GAME
+// ══════════════════════════════════════════════════════════
+function startGame(){
+  const name = document.getElementById('yourName').value.trim()||'You';
+  const numPlayers = parseInt(document.getElementById('numPlayers').value);
+  const maxRounds  = parseInt(document.getElementById('numRounds').value);
+  const aiNames = shuffle(['Aria','Kiran','Rohan','Priya','Dev']);
+  G = { numPlayers, maxRounds, currentRound:1, players:[], deck:[], discardPile:[],
+        currentPlayerIdx:0, phase:'peek_initial', drawnCard:null,
+        selectedMyCard:null, selectedOppCard:null, selectedOppPlayer:null,
+        pendingDropCard:null, pendingDropPhase:false,
+        aiActivityMsg:null, aiActivityCard:-1, _aiActivityCb:null,
+        _aiActivityTimer:null, _aiTurnScheduled:false };
+  G.players.push({name,isHuman:true,score:0,hand:[],handKnown:[]});
+  for(let i=1;i<numPlayers;i++) G.players.push({name:aiNames[i-1],isHuman:false,score:0,hand:[],handKnown:[]});
+  initRound();
+  showScreen('game');
+  document.getElementById('maxRoundDisplay').textContent = maxRounds;
+  addLog('system',`Round ${G.currentRound} — peek your bottom 2 cards then the game begins!`);
+  renderAll();
+  // Show initial peek (card 3 then card 4) — after that, all cards face-down
+  startInitialPeek();
+}
+
+// ══════════════════════════════════════════════════════════
+// FIX 1: INITIAL PEEK — shown once, then permanently hidden
+// ══════════════════════════════════════════════════════════
+function startInitialPeek(){
+  G.phase = 'peek_initial';
+  // Show card at index 2 first (position 3)
+  showPeekToast('Card 3 (bottom-left)', 'Remember this — it will be face-down for the rest of the round.',
+    G.players[0].hand[2], () => {
+      G.players[0].handKnown[2] = true;
+      // Then show card at index 3 (position 4)
+      showPeekToast('Card 4 (bottom-right)', 'Remember this too — face-down from now on.',
+        G.players[0].hand[3], () => {
+          G.players[0].handKnown[3] = true;
+          G.phase = 'main';
+          G.currentPlayerIdx = 0;
+          addLog('system','All cards face-down. Game begins!');
+          renderAll();
+        });
+    });
+}
+
+// ══════════════════════════════════════════════════════════
+// PEEK TOAST (generic — used for initial peek AND power peeks)
+// ══════════════════════════════════════════════════════════
+let peekCb = null;
+
+function showPeekToast(title, sub, card, cb){
+  document.getElementById('peekTitle').textContent = title;
+  document.getElementById('peekSub').textContent   = sub;
+  document.getElementById('peekCardDisplay').innerHTML = cardFaceHTML(card);
+  peekCb = cb;
+  document.getElementById('peekOverlay').classList.add('show');
+}
+
+function closePeek(){
+  document.getElementById('peekOverlay').classList.remove('show');
+  if(peekCb){ const f=peekCb; peekCb=null; f(); }
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════
+function renderAll(){
+  try {
+    renderScoresMini();
+    renderPlayers();
+    renderDeck();
+    renderActionPanel();
+    document.getElementById('roundDisplay').textContent = G.currentRound;
+  } catch(e) {
+    console.error('renderAll crash:', e);
+  }
+}
+
+function renderScoresMini(){
+  document.getElementById('scoresMini').innerHTML =
+    G.players.map(p=>`<div class="score-chip"><span class="name">${p.name}</span><span class="pts">${p.score}</span></div>`).join('');
+}
+
+// FIX 1 (continued): cards are ALWAYS rendered face-down in the main UI.
+// The green glow (known-glow) indicates "you know this card" but it stays face-down visually.
+function renderPlayers(){
+  const sec = document.getElementById('playersSection');
+  sec.innerHTML = '';
+  G.players.forEach((p,pi)=>{
+    const isHuman = p.isHuman;
+    const isActiveTurn = G.currentPlayerIdx===pi && G.phase==='main';
+    let rowCls = 'player-row' + (isActiveTurn?' active-turn':'') + (isHuman?' is-you':'');
+
+    const cardsHTML = p.hand.map((card,ci)=>{
+      // Null slot = card was dropped, position preserved as empty
+      if(card===null){
+        return `<div class="card-slot-empty"><div class="card-index">${ci+1}</div></div>`;
+      }
+      const known = isHuman && p.handKnown[ci];
+      let cls = 'card card-back';
+      let selectable = false, selected = false;
+      if(isHuman){
+        if(['choose_drawn_action','peek_own_choose','blind_swap_mine','compare_mine'].includes(G.phase)){
+          selectable = true; selected = G.selectedMyCard===ci;
+        }
+        if(G.phase==='drop_attempt'){
+          selectable = true; selected = false;
+        }
+      }
+      if(selectable) cls += ' selectable';
+      if(selected)   cls += ' selected';
+      if(known && !selected) cls += ' known-glow';
+      // Highlight card that AI just acted on
+      if(isHuman && G.aiActivityCard===ci) cls += ' ai-highlight';
+      const idx_label = `<div class="card-index">${ci+1}</div>`;
+      const onclick_attr = G.phase==='drop_attempt'
+        ? `onclick="humanAttemptDrop(${ci})"`
+        : (selectable ? `onclick="selectMyCard(${ci})"` : '');
+      return `<div class="${cls}" ${onclick_attr}>${idx_label}</div>`;
+    }).join('');
+
+    // Opponent cards — always face-down, selectable in opp-selection phases
+    const oppCardsHTML = !isHuman ? p.hand.map((card,ci)=>{
+      if(card===null){
+        // Empty slot — card was dropped, position preserved
+        return `<div class="card-slot-empty"><div class="card-index">${ci+1}</div></div>`;
+      }
+      let cls = 'card card-back';
+      let selectable = false, selected = false;
+      // BUG FIX: selectable if we're in an opp-selection phase — no need for selectedOppPlayer pre-check
+      if(['peek_opp_choose','blind_swap_opp','compare_opp'].includes(G.phase)){
+        selectable=true;
+        selected=(G.selectedOppPlayer===pi && G.selectedOppCard===ci);
+      }
+      if(selectable) cls+=' selectable';
+      if(selected)   cls+=' selected';
+      const onclick_attr = selectable ? `onclick="selectOppCard(${pi},${ci})"` : '';
+      return `<div class="${cls}" ${onclick_attr}><div class="card-index">${ci+1}</div></div>`;
+    }).join('') : '';
+
+    const turnTag = isActiveTurn ? `<span class="turn-tag">YOUR TURN</span>` :
+      (G.currentPlayerIdx===pi && !isHuman ? `<span class="turn-tag" style="color:var(--muted)">THINKING…</span>` : '');
+
+    sec.innerHTML += `
+      <div class="${rowCls}">
+        <div class="player-header">
+          <div class="player-name">${p.name}${isHuman?'<span class="you-tag">YOU</span>':''}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim)">Score: ${p.score}</span>
+            ${turnTag}
+          </div>
+        </div>
+        <div class="cards-row">${isHuman ? cardsHTML : oppCardsHTML}</div>
+      </div>`;
+  });
+}
+
+function cardFaceHTML(card){
+  if(!card) return `<div class="card card-back" style="opacity:0.3"></div>`;
+  const sc = (card.suit==='hearts'||card.suit==='diamonds') ? 'hearts' : 'spades';
+  const sym = SYM[card.suit];
+  return `<div class="card card-front ${sc}" style="margin:0 auto">
+    <div class="corner-tl">${card.rank}<br><span style="font-size:10px">${sym}</span></div>
+    <div class="suit" style="font-size:22px;margin:0">${sym}</div>
+    <div class="corner-br">${card.rank}<br><span style="font-size:10px">${sym}</span></div>
+    <div class="val-badge">${card.value >= 0 ? card.value : card.value}</div>
+  </div>`;
+}
+
+function renderDeck(){
+  document.getElementById('deckCount').textContent = G.deck.length + ' cards';
+  const discardEl = document.getElementById('discardPile');
+  // Find the topmost non-null card in the discard pile
+  let top = null;
+  for(let i = G.discardPile.length-1; i>=0; i--){
+    if(G.discardPile[i]!==null && G.discardPile[i]!==undefined){ top=G.discardPile[i]; break; }
+  }
+  if(!top){
+    discardEl.innerHTML = `<div class="discard-empty"><span>Empty</span></div>`;
+  } else {
+    discardEl.innerHTML = cardFaceHTML(top);
+  }
+  const dp = document.getElementById('drawPileCard');
+  const canDraw = G.phase==='main' && G.currentPlayerIdx===0;
+  dp.style.opacity  = canDraw ? '1' : '0.35';
+  dp.style.cursor   = canDraw ? 'pointer' : 'not-allowed';
+}
+
+function renderActionPanel(){
+  const title = document.getElementById('actionTitle');
+  const desc  = document.getElementById('actionDesc');
+  const btns  = document.getElementById('actionBtns');
+  btns.innerHTML='';
+
+  if(G.phase==='peek_initial'){ title.textContent='Initial Peek'; desc.textContent='Memorize your bottom 2 cards!'; return; }
+
+  // Drop attempt — player selects which card they believe matches
+  if(G.phase==='drop_attempt'){
+    title.textContent='Select Card to Drop';
+    desc.textContent=`Click the card you believe is a ${G.pendingDropCard ? G.pendingDropCard.rank : '?'}. Wrong guess = penalty card added.`;
+    return;
+  }
+
+  const cur = G.players[G.currentPlayerIdx];
+  const isHumanTurn = G.currentPlayerIdx===0;
+
+  if(G.phase==='main'){
+    if(isHumanTurn){
+      title.textContent='Your Turn';
+      desc.textContent='Draw a card, or declare if you think you have the lowest total.';
+      addBtn(btns,'Draw Card','primary',drawCard);
+      addBtn(btns,'⚑ Declare Show','danger',declareShow);
+    } else {
+      title.textContent=`${cur.name}'s Turn`;
+      desc.textContent='AI is thinking...';
+      if(!G._aiTurnScheduled){
+        G._aiTurnScheduled=true;
+        setTimeout(()=>{ G._aiTurnScheduled=false; aiTurn(); }, 900);
+      }
+    }
+    return;
+  }
+
+  if(G.phase==='choose_drawn_action'){
+    const c = G.drawnCard;
+    if(!c){ G.phase='main'; renderAll(); return; }
+    title.textContent='Drawn Card';
+
+    // Check if player knows they have matching cards in hand
+    const knownMatches = G.players[0].hand
+      .map((hc,ci)=>hc!==null && G.players[0].handKnown[ci] && hc.rank===c.rank ? ci : -1)
+      .filter(ci=>ci>=0);
+
+    let descText = `You drew <strong>${c.rank}${SYM[c.suit]}</strong> (value: ${c.value})`;
+    if(c.power) descText += ` — has power: <em>${c.power.replace('_',' ')}</em>`;
+    if(knownMatches.length>0){
+      descText += `.<br>⚡ You know you have ${knownMatches.length} matching <strong>${c.rank}</strong>(s). You can discard the drawn card and then attempt to drop your matches.`;
+    } else {
+      descText += '. Select a hand card to swap with it, use its power, or discard it.';
+    }
+    desc.innerHTML = descText;
+
+    if(G.selectedMyCard!==null){
+      addBtn(btns,`Swap with card ${G.selectedMyCard+1}`,'primary',()=>swapDrawnWithHand(G.selectedMyCard));
+    }
+    if(c.power){
+      const hasUnseenCard = G.players[0].hand.some((hc,ci)=>hc!==null && !G.players[0].handKnown[ci]);
+      const powerAvailable = (c.power==='blind_swap') ? hasUnseenCard : true;
+      if(powerAvailable){
+        addBtn(btns,'Use Power','success',usePower);
+      } else {
+        const note = document.createElement('span');
+        note.style.cssText='font-size:12px;color:var(--muted);padding:8px 0;align-self:center;';
+        note.textContent='J power unavailable — no unseen cards left.';
+        btns.appendChild(note);
+      }
+    }
+    // Chain drop: discard drawn card, then blind drop prompt fires for matching rank
+    if(knownMatches.length>0){
+      addBtn(btns,`Discard drawn ${c.rank} + drop matches`,'success',()=>discardDrawnCard());
+    }
+    addBtn(btns,'Discard Drawn Card','',discardDrawnCard);
+    return;
+  }
+
+  if(G.phase==='peek_own_choose'){
+    title.textContent='Peek Your Card'; desc.textContent='Select one of your face-down cards to peek at.';
+    if(G.selectedMyCard!==null) addBtn(btns,`Peek card ${G.selectedMyCard+1}`,'primary',executePeekOwn);
+    addBtn(btns,'Skip','',skipPower); return;
+  }
+  if(G.phase==='peek_opp_choose'){
+    title.textContent="Peek Opponent's Card"; desc.textContent="Select any opponent's card.";
+    if(G.selectedOppCard!==null&&G.selectedOppPlayer!==null) addBtn(btns,`Peek ${G.players[G.selectedOppPlayer].name}'s card ${G.selectedOppCard+1}`,'primary',executePeekOpp);
+    addBtn(btns,'Skip','',skipPower); return;
+  }
+  if(G.phase==='blind_swap_mine'){
+    title.textContent='Blind Swap'; desc.textContent='Select your card to swap.';
+    if(G.selectedMyCard!==null) addBtn(btns,`Select card ${G.selectedMyCard+1}`,'primary',()=>{G.phase='blind_swap_opp';G.selectedOppCard=null;G.selectedOppPlayer=null;renderAll();});
+    addBtn(btns,'Skip','',skipPower); return;
+  }
+  if(G.phase==='blind_swap_opp'){
+    title.textContent='Blind Swap — Opponent Card'; desc.textContent="Now select an opponent's card.";
+    if(G.selectedOppCard!==null&&G.selectedOppPlayer!==null) addBtn(btns,'Swap','primary',executeBlindSwap);
+    addBtn(btns,'Back','',()=>{G.phase='blind_swap_mine';G.selectedOppCard=null;renderAll();}); return;
+  }
+  if(G.phase==='compare_mine'){
+    title.textContent='Compare & Swap'; desc.textContent='Select one of your cards.';
+    if(G.selectedMyCard!==null) addBtn(btns,`Choose card ${G.selectedMyCard+1}`,'primary',()=>{G.phase='compare_opp';G.selectedOppCard=null;G.selectedOppPlayer=null;renderAll();});
+    addBtn(btns,'Skip','',skipPower); return;
+  }
+  if(G.phase==='compare_opp'){
+    title.textContent='Compare & Swap — Opponent'; desc.textContent="Select an opponent's card to compare.";
+    if(G.selectedOppCard!==null&&G.selectedOppPlayer!==null) addBtn(btns,'Compare','primary',()=>{G.phase='compare_decide';renderAll();});
+    addBtn(btns,'Back','',()=>{G.phase='compare_mine';G.selectedOppCard=null;renderAll();}); return;
+  }
+  if(G.phase==='compare_decide'){
+    const myC  = G.players[0].hand[G.selectedMyCard];
+    const oppC = G.players[G.selectedOppPlayer] && G.players[G.selectedOppPlayer].hand[G.selectedOppCard];
+    if(!myC || !oppC){ endTurn(); return; }
+    title.textContent='Compare Result';
+    desc.innerHTML=`Your card: <strong>${myC.rank}</strong> (${myC.value}) &mdash; ${G.players[G.selectedOppPlayer].name}'s card: <strong>${oppC.rank}</strong> (${oppC.value}). Swap?`;
+    addBtn(btns,'Yes, Swap!','primary',()=>{
+      G.players[0].hand[G.selectedMyCard]=oppC;
+      G.players[G.selectedOppPlayer].hand[G.selectedOppCard]=myC;
+      G.players[0].handKnown[G.selectedMyCard]=true;
+      addLog('you',`Swapped card ${G.selectedMyCard+1} with ${G.players[G.selectedOppPlayer].name}`);
+      endTurn();
+    });
+    addBtn(btns,'No, Keep','',endTurn); return;
+  }
+  title.textContent=''; desc.textContent='';
+}
+
+function addBtn(container,text,cls,fn){
+  const b=document.createElement('button');
+  b.className='action-btn '+cls;
+  b.textContent=text;
+  b.onclick=fn;
+  container.appendChild(b);
+}
+
+// ══════════════════════════════════════════════════════════
+// PLAYER ACTIONS
+// ══════════════════════════════════════════════════════════
+function drawCard(){
+  if(G.phase!=='main'||G.currentPlayerIdx!==0)return;
+  if(G.deck.length===0)reshuffleDeck();
+  G.drawnCard=G.deck.pop();
+  G.phase='choose_drawn_action';
+  G.selectedMyCard=null;
+  addLog('you','Drew a card');
+  renderAll();
+}
+
+function selectMyCard(idx){
+  if(G.players[0].hand[idx]===null) return; // can't select empty slot
+  G.selectedMyCard=(G.selectedMyCard===idx?null:idx);
+  renderAll();
+}
+function selectOppCard(pi,ci){
+  if(G.players[pi].hand[ci]===null) return; // can't select empty slot
+  if(G.selectedOppPlayer===pi&&G.selectedOppCard===ci){G.selectedOppPlayer=null;G.selectedOppCard=null;}
+  else{G.selectedOppPlayer=pi;G.selectedOppCard=ci;}
+  renderAll();
+}
+
+function swapDrawnWithHand(handIdx){
+  if(G.players[0].hand[handIdx]===null) return;
+
+  // Get pixel positions BEFORE any state change
+  const drawPileEl  = document.getElementById('drawPileCard');
+  const handCardEls = document.querySelectorAll('.player-row.is-you .cards-row .card');
+  const discardEl   = document.getElementById('discardPile').firstElementChild;
+
+  const fromRect  = drawPileEl.getBoundingClientRect();       // drawn card starts here
+  const slotRect  = handCardEls[handIdx] ? handCardEls[handIdx].getBoundingClientRect() : fromRect;
+  const toRect    = discardEl ? discardEl.getBoundingClientRect() : slotRect;
+
+  // Apply state immediately (invisible during animation)
+  const discarded = G.players[0].hand[handIdx];
+  G.players[0].hand[handIdx]    = G.drawnCard;
+  G.players[0].handKnown[handIdx] = true;
+  G.discardPile.push(discarded);
+  G.drawnCard = null;
+  addLog('you', `Swapped card ${handIdx+1} — discarded ${discarded.rank}${SYM[discarded.suit]} (${discarded.value})`);
+
+  // Animate: flying card 1 — draw pile → hand slot (new card going in, face-down)
+  animateFlyingCard(fromRect, slotRect, () => {});
+
+  // Animate: flying card 2 — hand slot → discard pile (old card going out, face-down)
+  // Slight delay so the two motions are distinguishable
+  setTimeout(()=>{
+    animateFlyingCard(slotRect, toRect, ()=>{
+      triggerDropCheck(discarded, 0);
+    });
+  }, 80);
+
+  // Re-render after animation completes
+  setTimeout(()=>renderAll(), 500);
+}
+
+function animateFlyingCard(fromRect, toRect, onDone){
+  const el = document.createElement('div');
+  el.className = 'flying-card';
+  // Start position
+  el.style.left    = fromRect.left + 'px';
+  el.style.top     = fromRect.top  + 'px';
+  el.style.opacity = '1';
+  document.body.appendChild(el);
+
+  // Force reflow so the start position registers before transition fires
+  el.getBoundingClientRect();
+
+  // Animate to target
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      el.style.left = toRect.left + 'px';
+      el.style.top  = toRect.top  + 'px';
+    });
+  });
+
+  setTimeout(()=>{
+    el.style.opacity = '0';
+    setTimeout(()=>{ el.remove(); onDone(); }, 150);
+  }, 420);
+}
+
+function discardDrawnCard(){
+  const discarded=G.drawnCard;
+  if(!discarded) return;
+  G.discardPile.push(discarded);
+  addLog('you',`Discarded drawn ${discarded.rank}${SYM[discarded.suit]}`);
+  G.drawnCard=null;
+
+  // Check if human knows they have matching cards — offer blind drop on their own discard
+  const human = G.players[0];
+  const hasKnownMatch = human.hand.some((c,ci)=>c!==null && human.handKnown[ci] && c.rank===discarded.rank);
+  if(hasKnownMatch){
+    // Offer drop prompt as if an opponent discarded — player selects blindly
+    showDropPrompt(discarded, 0); // discardingPlayerIdx=0 means self, but we override below
+  } else {
+    triggerDropCheck(discarded, 0);
+  }
+}
+
+// Override: showDropPrompt can now also fire for self-discard chain drops
+function showDropPromptSelf(discardedCard){
+  G.pendingDropCard = discardedCard;
+  G.pendingDropPhase = true;
+  G.phase = 'drop_attempt';
+  const el = document.getElementById('dropPrompt');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="drop-prompt">
+      <h3>Drop Your Matching Cards</h3>
+      <p>You discarded a <strong>${discardedCard.rank}</strong>.<br>
+      Click each card you believe is also a <strong>${discardedCard.rank}</strong> to drop it. Wrong = penalty card. You can drop multiple one at a time.</p>
+      <div class="action-btns">
+        <button class="action-btn" onclick="declineHumanDrop()">Done — Stop Dropping</button>
+      </div>
+    </div>`;
+  renderAll();
+}
+
+
+function usePower(){
+  const power=G.drawnCard.power;
+  G.discardPile.push(G.drawnCard);
+  G.drawnCard=null;
+  G.selectedMyCard=null;G.selectedOppCard=null;G.selectedOppPlayer=null;
+  if(power==='peek_own')       G.phase='peek_own_choose';
+  else if(power==='peek_opp')  G.phase='peek_opp_choose';
+  else if(power==='blind_swap')G.phase='blind_swap_mine';
+  else if(power==='compare_swap')G.phase='compare_mine';
+  renderAll();
+}
+
+function executePeekOwn(){
+  G.players[0].handKnown[G.selectedMyCard]=true;
+  addLog('you',`Peeked at your card ${G.selectedMyCard+1}`);
+  showPeekToast(`Your Card ${G.selectedMyCard+1}`,'You now remember this card.',G.players[0].hand[G.selectedMyCard],()=>endTurn());
+}
+
+function executePeekOpp(){
+  const card=G.players[G.selectedOppPlayer].hand[G.selectedOppCard];
+  // Don't log the rank — the peek toast is the only place you see it
+  addLog('you',`Peeked at ${G.players[G.selectedOppPlayer].name}'s card ${G.selectedOppCard+1}`);
+  showPeekToast(
+    `${G.players[G.selectedOppPlayer].name}'s Card ${G.selectedOppCard+1}`,
+    'Memorize this — you cannot see it again.',
+    card,
+    ()=>endTurn()
+  );
+}
+
+function executeBlindSwap(){
+  if(G.players[0].hand[G.selectedMyCard]===null) return;
+  if(G.players[G.selectedOppPlayer].hand[G.selectedOppCard]===null) return;
+  const myCard=G.players[0].hand[G.selectedMyCard];
+  const oppCard=G.players[G.selectedOppPlayer].hand[G.selectedOppCard];
+  G.players[0].hand[G.selectedMyCard]=oppCard;
+  G.players[G.selectedOppPlayer].hand[G.selectedOppCard]=myCard;
+  G.players[0].handKnown[G.selectedMyCard]=false; // no longer know what's there
+  addLog('you',`Blind swapped card ${G.selectedMyCard+1} with ${G.players[G.selectedOppPlayer].name}'s card ${G.selectedOppCard+1}`);
+  endTurn();
+}
+
+function skipPower(){ addLog('you','Skipped power'); endTurn(); }
+
+function declareShow(){
+  if(G.phase!=='main'||G.currentPlayerIdx!==0)return;
+  resolveDeclaration(0);
+}
+
+// ══════════════════════════════════════════════════════════
+// AI ACTIVITY NOTIFICATION — shows what AI did to your cards
+// ══════════════════════════════════════════════════════════
+function showAiActivityToast(msg, highlightCardIdx, cb){
+  G.aiActivityMsg = msg;
+  G.aiActivityCard = highlightCardIdx;
+  G._aiActivityCb = cb;
+  let secondsLeft = 10;
+
+  const overlay = document.getElementById('aiActivityOverlay');
+  document.getElementById('aiActivityTitle').innerHTML = '👁 Opponent Action';
+  document.getElementById('aiActivityBody').innerHTML = `<p style="font-size:14px;color:var(--text);line-height:1.6">${msg}</p>`;
+  document.getElementById('aiActivityCountdown').textContent = `Auto-closing in ${secondsLeft}s`;
+  overlay.style.display = 'flex';
+
+  renderAll(); // highlight the card
+
+  if(G._aiActivityTimer) clearInterval(G._aiActivityTimer);
+  G._aiActivityTimer = setInterval(()=>{
+    secondsLeft--;
+    const cd = document.getElementById('aiActivityCountdown');
+    if(cd) cd.textContent = `Auto-closing in ${secondsLeft}s`;
+    if(secondsLeft<=0){
+      clearInterval(G._aiActivityTimer); G._aiActivityTimer=null;
+      closeAiActivity();
+    }
+  }, 1000);
+}
+
+function closeAiActivity(){
+  if(G._aiActivityTimer){ clearInterval(G._aiActivityTimer); G._aiActivityTimer=null; }
+  const overlay = document.getElementById('aiActivityOverlay');
+  if(overlay) overlay.style.display = 'none';
+  G.aiActivityMsg=null; G.aiActivityCard=-1;
+  const cb = G._aiActivityCb; G._aiActivityCb=null;
+  if(cb) cb();
+}
+
+// ══════════════════════════════════════════════════════════
+// DROP CHECK — after any discard, player selects card blind
+// ══════════════════════════════════════════════════════════
+function triggerDropCheck(discardedCard, discardingPlayerIdx){
+  if(!discardedCard || !discardedCard.rank){ endTurn(); return; }
+  // AI players drop instantly if they know they have the same rank
+  for(let pi=0;pi<G.numPlayers;pi++){
+    if(pi===discardingPlayerIdx) continue;
+    const p=G.players[pi];
+    if(p.isHuman) continue;
+    for(let ci=0;ci<p.hand.length;ci++){
+      // Fix 1: explicit null guard before accessing .rank
+      if(p.hand[ci]!==null && p.handKnown[ci] && p.hand[ci].rank===discardedCard.rank){
+        G.discardPile.push(p.hand[ci]);
+        p.hand[ci]=null;
+        p.handKnown[ci]=false;
+        addLog('ai',`${p.name} dropped a card!`);
+        break;
+      }
+    }
+  }
+
+  // Human: offer drop opportunity after any opponent discard
+  if(discardingPlayerIdx!==0 && G.players[0].hand.some(c=>c!==null)){
+    showDropPrompt(discardedCard, discardingPlayerIdx);
+    return;
+  }
+  endTurn();
+}
+
+function showDropPrompt(discardedCard, discardingPlayerIdx){
+  G.pendingDropCard = discardedCard;
+  G.pendingDropPhase = true;
+  G.phase = 'drop_attempt';
+  const el = document.getElementById('dropPrompt');
+  el.style.display = 'block';
+  const isSelf = discardingPlayerIdx===0;
+  el.innerHTML = `
+    <div class="drop-prompt">
+      <h3>${isSelf ? 'Drop Your Matching Cards' : 'Drop Opportunity'}</h3>
+      <p>${isSelf
+        ? `You discarded a <strong>${discardedCard.rank}</strong>. Click each card you believe is also a <strong>${discardedCard.rank}</strong>. Wrong = penalty. Drop multiple one at a time.`
+        : `${G.players[discardingPlayerIdx].name} discarded a <strong>${discardedCard.rank}</strong>.<br>Click a card you believe is a <strong>${discardedCard.rank}</strong> to drop it. Wrong = penalty card.`
+      }</p>
+      <div class="action-btns">
+        <button class="action-btn" onclick="declineHumanDrop()">${isSelf ? 'Done — Stop Dropping' : 'Skip — Don\'t Drop'}</button>
+      </div>
+    </div>`;
+  renderAll();
+}
+
+function humanAttemptDrop(cardIdx){
+  const human = G.players[0];
+  const card = human.hand[cardIdx];
+  if(card===null) return;
+  if(!G.pendingDropCard){ G.phase='main'; endTurn(); return; }
+  document.getElementById('dropPrompt').style.display='none';
+
+  const savedCard = G.pendingDropCard;
+
+  if(card.rank===savedCard.rank){
+    G.discardPile.push(card);
+    human.hand[cardIdx]=null;
+    human.handKnown[cardIdx]=false;
+    addLog('you',`Correct drop! Dropped ${card.rank}${SYM[card.suit]}.`);
+    G.pendingDropCard=null;
+    G.pendingDropPhase=false;
+    G.phase='main';
+    renderAll();
+    // Re-prompt if still has non-null cards — could have more matches
+    if(human.hand.some(c=>c!==null)){
+      showDropPrompt(savedCard, G.currentPlayerIdx);
+    } else {
+      endTurn();
+    }
+  } else {
+    if(G.deck.length===0) reshuffleDeck();
+    const penalty=G.deck.pop();
+    if(penalty){ human.hand.push(penalty); human.handKnown.push(false); }
+    addLog('you',`Wrong drop! ${card.rank} ≠ ${savedCard.rank}. Penalty card added.`);
+    G.pendingDropCard=null;
+    G.pendingDropPhase=false;
+    G.phase='main';
+    renderAll();
+    endTurn();
+  }
+}
+
+function declineHumanDrop(){
+  document.getElementById('dropPrompt').style.display='none';
+  G.phase='main';
+  G.pendingDropCard=null;
+  G.pendingDropPhase=false;
+  endTurn();
+}
+
+// ══════════════════════════════════════════════════════════
+// DECLARATION
+// ══════════════════════════════════════════════════════════
+function resolveDeclaration(declarerIdx){
+  const totals=G.players.map(p=>handTotal(p));
+  const minTotal=Math.min(...totals);
+  const correct=totals[declarerIdx]===minTotal;
+  const roundScores=[];
+  for(let pi=0;pi<G.numPlayers;pi++){
+    let s=totals[pi];
+    if(pi===declarerIdx&&!correct)s+=25;
+    G.players[pi].score+=s;
+    roundScores.push(s);
+  }
+  addLog('system',`${G.players[declarerIdx].name} declared! ${correct?'✓ Correct!':'✗ Wrong — +25 penalty'}`);
+  showRoundEnd(declarerIdx,correct,totals,roundScores);
+}
+
+function showRoundEnd(declarerIdx,correct,totals,roundScores){
+  const overlay=document.getElementById('roundEndOverlay');
+  const title=document.getElementById('roundEndTitle');
+  title.textContent=correct?'✓ Correct Declaration!':'✗ Wrong Declaration!';
+  title.style.color=correct?'var(--green)':'var(--red)';
+  document.getElementById('roundEndSubtitle').textContent=
+    `${G.players[declarerIdx].name} declared. ${correct?'They had the lowest total.':'+25 penalty applied.'}`;
+  const min=Math.min(...totals);
+  let html=`<thead><tr><th>Player</th><th>Hand</th><th>Total</th><th>Round +</th><th>Total</th></tr></thead><tbody>`;
+  for(let pi=0;pi<G.numPlayers;pi++){
+    const p=G.players[pi];
+    const isWinner=totals[pi]===min;
+    const isPenalty=pi===declarerIdx&&!correct;
+    const cardsStr=p.hand.filter(c=>c!=null).map(c=>`${c.rank}(${c.value})`).join(' ') || '—';
+    const rowCls=isWinner&&correct&&pi===declarerIdx?'winner-row':isPenalty?'penalty-row':'';
+    html+=`<tr class="${rowCls}">
+      <td>${p.name}${pi===declarerIdx?' ⚑':''}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${cardsStr}</td>
+      <td>${totals[pi]}</td>
+      <td class="${isPenalty?'penalty-cell':''}">${isPenalty?`+${roundScores[pi]} (includes +25)`:'+'+roundScores[pi]}</td>
+      <td>${p.score}</td>
+    </tr>`;
+  }
+  html+='</tbody>';
+  document.getElementById('revealTable').innerHTML=html;
+  overlay.classList.add('show');
+}
+
+function nextRound(){
+  document.getElementById('roundEndOverlay').classList.remove('show');
+  if(G.currentRound>=G.maxRounds){ showGameOver(); return; }
+  G.currentRound++;
+  initRound();
+  addLog('system',`Round ${G.currentRound} begins!`);
+  renderAll();
+  startInitialPeek();
+}
+
+function showGameOver(){
+  const scores=G.players.map((p,i)=>({name:p.name,score:p.score})).sort((a,b)=>a.score-b.score);
+  document.getElementById('championName').textContent=scores[0].name;
+  document.getElementById('finalScores').innerHTML=scores.map((s,r)=>
+    `<div class="final-score-row ${r===0?'winner':''}">
+      <div class="fsname">${r===0?'🥇 ':r===1?'🥈 ':'🥉 '}${s.name}</div>
+      <div class="fsscore">${s.score} pts</div>
+    </div>`).join('');
+  document.getElementById('gameOverOverlay').classList.add('show');
+}
+
+// ══════════════════════════════════════════════════════════
+// END TURN + AI
+// ══════════════════════════════════════════════════════════
+function endTurn(){
+  G.phase='main';
+  G.drawnCard=null;
+  G.selectedMyCard=null;G.selectedOppCard=null;G.selectedOppPlayer=null;
+  G._aiTurnScheduled=false;
+  G.currentPlayerIdx=(G.currentPlayerIdx+1)%G.numPlayers;
+  renderAll();
+}
+
+// ══════════════════════════════════════════════════════════
+// AI CARD POSITION HELPER
+// ══════════════════════════════════════════════════════════
+function getAiCardRect(aiPlayerIdx, cardIdx){
+  // aiPlayerIdx is G.players index (1, 2, …). Find the DOM row by counting non-human rows.
+  let aiCount = 0;
+  let targetRow = null;
+  document.querySelectorAll('.player-row').forEach(row=>{
+    if(!row.classList.contains('is-you')){
+      if(aiCount === aiPlayerIdx-1) targetRow = row;
+      aiCount++;
+    }
+  });
+  if(!targetRow) return null;
+  const cards = targetRow.querySelectorAll('.cards-row .card');
+  return cards[cardIdx] ? cards[cardIdx].getBoundingClientRect() : null;
+}
+
+function getHumanCardRect(cardIdx){
+  const row = document.querySelector('.player-row.is-you');
+  if(!row) return null;
+  const cards = row.querySelectorAll('.cards-row .card');
+  return cards[cardIdx] ? cards[cardIdx].getBoundingClientRect() : null;
+}
+
+// ══════════════════════════════════════════════════════════
+// OPPONENT SWAP ANIMATION (draw → slot, slot → discard)
+// ══════════════════════════════════════════════════════════
+function animateAiSwap(aiPlayerIdx, aiCardIdx, onDone){
+  const drawRect    = document.getElementById('drawPileCard').getBoundingClientRect();
+  const discardFirst = document.getElementById('discardPile').firstElementChild;
+  const discardRect = discardFirst ? discardFirst.getBoundingClientRect() : drawRect;
+  const slotRect    = getAiCardRect(aiPlayerIdx, aiCardIdx) || drawRect;
+
+  animateFlyingCard(drawRect, slotRect, ()=>{});
+  setTimeout(()=> animateFlyingCard(slotRect, discardRect, onDone), 100);
+}
+
+// ══════════════════════════════════════════════════════════
+// Q POWER ANIMATION: show both cards face-up briefly, then animate swap
+// ══════════════════════════════════════════════════════════
+function showQCompareAnimation(aiPlayerIdx, aiCardIdx, humanCardIdx, aiCard, humanCard, didSwap, onDone){
+  let secondsLeft = 10;
+  const overlay = document.getElementById('aiActivityOverlay');
+
+  document.getElementById('aiActivityTitle').innerHTML =
+    `👁 ${G.players[aiPlayerIdx].name} used Q — Compare & Swap`;
+  document.getElementById('aiActivityBody').innerHTML = `
+    <div style="display:flex;gap:24px;justify-content:center;align-items:center;margin:12px 0">
+      <div style="text-align:center">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${G.players[aiPlayerIdx].name}'s card</div>
+        <div class="card card-back" style="margin:0 auto"><div style="font-size:9px;color:var(--muted);margin-top:28px;text-align:center">Hidden</div></div>
+      </div>
+      <div style="font-size:26px;color:${didSwap?'var(--green)':'var(--muted)'}">${didSwap?'⇄':'='}</div>
+      <div style="text-align:center">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Your Card ${humanCardIdx+1}</div>
+        ${cardFaceHTML(humanCard)}
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${didSwap
+      ? `Swapped! ${G.players[aiPlayerIdx].name} took your Card ${humanCardIdx+1} and put one of their cards in its place. You don't know what they gave you.`
+      : `${G.players[aiPlayerIdx].name} compared your Card ${humanCardIdx+1} but decided <strong>not</strong> to swap.`
+    }</p>`;
+  document.getElementById('aiActivityCountdown').textContent = `Auto-closing in ${secondsLeft}s`;
+  overlay.style.display = 'flex';
+
+  G._aiActivityCb = ()=>{ renderAll(); onDone(); };
+  G.aiActivityCard = humanCardIdx;
+
+  if(didSwap){
+    setTimeout(()=>{
+      const aiRect    = getAiCardRect(aiPlayerIdx, aiCardIdx);
+      const humanRect = getHumanCardRect(humanCardIdx);
+      if(aiRect && humanRect){
+        animateFlyingCard(aiRect, humanRect, ()=>{});
+        setTimeout(()=> animateFlyingCard(humanRect, aiRect, ()=>{}), 120);
+      }
+    }, 800);
+  }
+
+  if(G._aiActivityTimer) clearInterval(G._aiActivityTimer);
+  G._aiActivityTimer = setInterval(()=>{
+    secondsLeft--;
+    const cd = document.getElementById('aiActivityCountdown');
+    if(cd) cd.textContent = `Auto-closing in ${secondsLeft}s`;
+    if(secondsLeft<=0){
+      clearInterval(G._aiActivityTimer); G._aiActivityTimer=null;
+      closeAiActivity();
+    }
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════════════════
+// AI TURN — fully null-safe
+// ══════════════════════════════════════════════════════════
+function aiTurn(){
+  if(G.phase!=='main'||G.players[G.currentPlayerIdx].isHuman)return;
+  const ai=G.players[G.currentPlayerIdx];
+  const pi=G.currentPlayerIdx;
+
+  // Estimate known total; guess 5 for each unknown card
+  const knownTotal=ai.hand.reduce((s,c,ci)=>{
+    if(c===null) return s;
+    return s+(ai.handKnown[ci]?c.value:5);
+  },0);
+  const knownCount=ai.hand.filter((c,ci)=>c!==null&&ai.handKnown[ci]).length;
+  const totalCards=ai.hand.filter(c=>c!==null).length;
+
+  if(knownCount>=Math.min(3,totalCards)&&knownTotal<=7){
+    addLog('ai',`${ai.name} declares!`);
+    resolveDeclaration(pi);
+    return;
+  }
+
+  if(G.deck.length===0)reshuffleDeck();
+  const drawn=G.deck.pop();
+  if(!drawn){ endTurn(); return; } // safety
+  addLog('ai',`${ai.name} draws`);
+
+  // ── peek_own ──────────────────────────────────────────
+  if(drawn.power==='peek_own'){
+    const unknown=ai.hand.map((c,i)=>c!==null&&!ai.handKnown[i]?i:-1).filter(i=>i>=0);
+    if(unknown.length>0) ai.handKnown[unknown[0]]=true;
+    G.discardPile.push(drawn);
+    addLog('ai',`${ai.name} peeked at their own card`);
+    triggerDropCheck(drawn,pi);
+    return;
+  }
+
+  // ── peek_opp ─────────────────────────────────────────
+  if(drawn.power==='peek_opp'){
+    const targets=G.players[0].hand.map((c,i)=>c!==null?i:-1).filter(i=>i>=0);
+    G.discardPile.push(drawn);
+    if(targets.length===0){ triggerDropCheck(drawn,pi); return; }
+    const idx=targets[Math.floor(Math.random()*targets.length)];
+    addLog('ai',`${ai.name} used peek power`);
+    showAiActivityToast(
+      `${ai.name} peeked at your <strong>Card ${idx+1}</strong>!`,
+      idx,
+      ()=>triggerDropCheck(drawn,pi)
+    );
+    return;
+  }
+
+  // ── blind_swap (J) ────────────────────────────────────
+  if(drawn.power==='blind_swap'){
+    const aiUnseen=ai.hand.map((c,i)=>c!==null&&!ai.handKnown[i]?i:-1).filter(i=>i>=0);
+    const humanTargets=G.players[0].hand.map((c,i)=>c!==null?i:-1).filter(i=>i>=0);
+    G.discardPile.push(drawn);
+    if(aiUnseen.length===0||humanTargets.length===0){ triggerDropCheck(drawn,pi); return; }
+    const myIdx =aiUnseen  [Math.floor(Math.random()*aiUnseen.length)];
+    const yourIdx=humanTargets[Math.floor(Math.random()*humanTargets.length)];
+    const myCard  =ai.hand[myIdx];
+    const yourCard=G.players[0].hand[yourIdx];
+    if(!myCard||!yourCard){ triggerDropCheck(drawn,pi); return; }
+    ai.hand[myIdx]          =yourCard;
+    G.players[0].hand[yourIdx]=myCard;
+    ai.handKnown[myIdx]           =false;
+    G.players[0].handKnown[yourIdx]=false;
+    addLog('ai',`${ai.name} used blind swap`);
+    showAiActivityToast(
+      `${ai.name} blind-swapped your <strong>Card ${yourIdx+1}</strong> with one of their cards!`,
+      yourIdx,
+      ()=>triggerDropCheck(drawn,pi)
+    );
+    return;
+  }
+
+  // ── compare_swap (Q) ─────────────────────────────────
+  if(drawn.power==='compare_swap'){
+    const humanTargets=G.players[0].hand.map((c,i)=>c!==null?i:-1).filter(i=>i>=0);
+    G.discardPile.push(drawn);
+    if(humanTargets.length===0){ triggerDropCheck(drawn,pi); return; }
+    const yourIdx=humanTargets[Math.floor(Math.random()*humanTargets.length)];
+    const yourCard=G.players[0].hand[yourIdx];
+    if(!yourCard){ triggerDropCheck(drawn,pi); return; }
+
+    // Find AI's worst known card
+    let myWorstIdx=-1, myWorstVal=-Infinity;
+    for(let ci=0;ci<ai.hand.length;ci++){
+      const c=ai.hand[ci];
+      if(c!==null && ai.handKnown[ci] && c.value>myWorstVal){
+        myWorstVal=c.value; myWorstIdx=ci;
+      }
+    }
+    // If no known card, pick first non-null as the compare target
+    if(myWorstIdx===-1){
+      for(let ci=0;ci<ai.hand.length;ci++){
+        if(ai.hand[ci]!==null){ myWorstIdx=ci; myWorstVal=ai.hand[ci].value; break; }
+      }
+    }
+    if(myWorstIdx===-1){ triggerDropCheck(drawn,pi); return; }
+
+    const aiCard=ai.hand[myWorstIdx];
+    if(!aiCard){ triggerDropCheck(drawn,pi); return; }
+
+    const didSwap = myWorstVal > yourCard.value;
+    if(didSwap){
+      ai.hand[myWorstIdx]          =yourCard;
+      G.players[0].hand[yourIdx]   =aiCard;
+      ai.handKnown[myWorstIdx]        =true;
+      G.players[0].handKnown[yourIdx] =false;
+    }
+    addLog('ai',`${ai.name} used Q — compare${didSwap?' & swap':' (no swap)'}`);
+    // Show animated Q reveal
+    showQCompareAnimation(pi, myWorstIdx, yourIdx, aiCard, yourCard, didSwap,
+      ()=>{ renderAll(); triggerDropCheck(drawn,pi); }
+    );
+    return;
+  }
+
+  // ── normal swap or discard ────────────────────────────
+  let swapIdx=-1, maxVal=drawn.value;
+  for(let ci=0;ci<ai.hand.length;ci++){
+    const c=ai.hand[ci];
+    if(c!==null && ai.handKnown[ci] && c.value>maxVal){ maxVal=c.value; swapIdx=ci; }
+  }
+  if(swapIdx>=0){
+    const disc=ai.hand[swapIdx];
+    if(!disc){ G.discardPile.push(drawn); triggerDropCheck(drawn,pi); return; }
+    ai.hand[swapIdx]     =drawn;
+    ai.handKnown[swapIdx]=true;
+    G.discardPile.push(disc);
+    addLog('ai',`${ai.name} swapped — discarded ${disc.rank}(${disc.value})`);
+    renderAll(); // render new state immediately
+    animateAiSwap(pi, swapIdx, ()=>triggerDropCheck(disc,pi));
+  } else {
+    G.discardPile.push(drawn);
+    addLog('ai',`${ai.name} discarded drawn card`);
+    triggerDropCheck(drawn,pi);
+  }
+}
+
+function reshuffleDeck(){
+  if(G.discardPile.length<=1)return;
+  const top=G.discardPile.pop();
+  // Strip any null entries before shuffling back
+  G.deck=shuffle(G.discardPile.filter(c=>c!==null&&c!==undefined));
+  G.discardPile=top ? [top] : [];
+  addLog('system','Deck reshuffled.');
+}
+
+// ══════════════════════════════════════════════════════════
+// LOG
+// ══════════════════════════════════════════════════════════
+function addLog(type,msg){
+  const log=document.getElementById('gameLog');
+  const e=document.createElement('div');
+  e.className='log-entry';
+  const who=type==='you'?'You':type==='ai'?'':'⬦';
+  if(who) e.innerHTML=`<span class="who">${who}</span> ${msg}`;
+  else e.textContent=msg;
+  log.appendChild(e);
+  log.scrollTop=log.scrollHeight;
+  if(log.children.length>50)log.removeChild(log.firstChild);
+}
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function showRules(){ document.getElementById('rulesModal').classList.add('open'); }
+function closeRules(){ document.getElementById('rulesModal').classList.remove('open'); }
+</script>
+</body>
+</html>
